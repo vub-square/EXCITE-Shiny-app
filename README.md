@@ -3,7 +3,7 @@
 
 This research tool helps researchers uncover and visualise complex interactions in their data using a combination of ANOVA and decision tree modeling. Designed for ease of use, EXCITE offers a seamless workflow from data import to advanced statistical analysis, with the ability to download reports summarising your results. 
 
-The application is freely accessible at <https://percysavieri.shinyapps.io/EXCITE/>
+The application is freely accessible at <https://zq9mvv-vub0square.shinyapps.io/EXCITE-research-tool/>
 
 
 ### User-interface
