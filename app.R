@@ -52,27 +52,27 @@ library(tidyr) # For data manipulation
 #####################################
 ui <- fluidPage(
   shinyFeedback::useShinyFeedback(),
-  # tags$head(
+  tags$head(
   # Google Analytics tracking
-  #   HTML(
-  #     "<!-- Google tag (gtag.js) -->
-  #       <script async src='https://www.googletagmanager.com/gtag/js?id=G-FEB7W5B2B0'></script>
-  #       <script>
-  #       window.dataLayer = window.dataLayer || [];
-  #     function gtag(){dataLayer.push(arguments);}
-  #     gtag('js', new Date());
-  #
-  #     gtag('config', 'G-FEB7W5B2B0');
-  #     </script>"
-  #   )
-  # ),
+    HTML(
+      "<!-- Google tag (gtag.js) -->
+        <script async src='https://www.googletagmanager.com/gtag/js?id=G-CCH1S9XB2K'></script>
+        <script>
+        window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      
+      gtag('config', 'G-CCH1S9XB2K');
+      </script>"
+    )
+  ),
 
   # Open navbarPage for main headings
   navbarPage(
     id = "navbar",
     # Application title
     # tags$p("EXCITE", style = "color:#003399"),
-    title = "EXCITE: Exploring Complex Interactions with Tree Models",
+    title = "EXCITE",
     theme = shinytheme("flatly"),
 
     # Main tabs for the web application
@@ -90,15 +90,9 @@ ui <- fluidPage(
         ),
         mainPanel(
           width = 8,
-          tags$h4("Welcome to EXCITE", style = "color:#003399"),
-          tags$p("Welcome to EXCITE (Exploring Complex Interactions using Tree-based models)! This research tool helps researchers uncover and visualise complex interactions in their data using a combination of ANOVA and decision tree modeling. Designed for ease of use, EXCITE offers a seamless workflow from data import to advanced statistical analysis, with the ability to download reports summarising your results."),
-          tags$p(
-            "EXCITE was developed by the ",
-            tags$a(href = "https://square.research.vub.be/", "Support for Quantitative and Qualitative Research (SQUARE)"),
-            " core facility, part of the ",
-            tags$a(href = "https://bisi.research.vub.be/", "Biostatistics and Medical Informatics research group (BISI)"),
-            " at the Vrije Universiteit Brussel (VUB). We aim to provide researchers with complimentary statistical support."
-          ),
+          tags$h4("Welcome to EXCITE (Enhanced eXploration of Complex Interactions in ANOVA using Trees)", style = "color:#003399"),
+          tags$p("This research tool helps researchers uncover and visualise complex interactions in their data using a combination of ANOVA and decision tree modeling. Designed for ease of use, EXCITE offers a seamless workflow from data import to advanced statistical analysis, with the ability to download reports summarising your results."),
+          tags$p("This app was developed by the", tags$a(href = "https://square.research.vub.be/", "Support for Quantitative and Qualitative Research (SQUARE)"), "to provide the research community with complimentary support in statistics. The developers are part of the", tags$a(href = "https://bisi.research.vub.be/", "Biostatistics and Medical Informatics research group (BISI)"), "at the Vrije Universiteit Brussel (VUB)."),
           br(),
           tags$h4("Key Features", style = "color:#003399"),
           tags$ul(
@@ -126,11 +120,6 @@ ui <- fluidPage(
             style = "color:#FF6600"
           ),
           br(), br(), br(), br()
-          # Optional: Uncomment if in testing phase
-          # tags$p(
-          #   strong("Note: This app is currently in the testing phase."),
-          #   style = "color:#EB0018"
-          # )
         )
       ),
       br(), br(), br()
@@ -148,11 +137,43 @@ ui <- fluidPage(
           tags$hr(),
           selectizeInput(
             inputId = "exdata", label = strong("Choose example data", style = "color:#003399"), selected = "",
-            choices = c("", "Penguins", "BP reduction", "Pain reduction", "VO2 Max improvement", "Type 2 Diabetes (3-way)"),
-            options = list(placeholder = "Choose example data")
+            choices = c("", "Pain reduction (2-way)", "Type 2 Diabetes (3-way)"),
+            options = list(placeholder = "Select dataset")
           ),
+          
+          # Simulate data based on the examples
           tags$hr(),
+          tags$h5(em("OR make changes to example datasets using simulations", style = "color:#FF6600")),
+          selectizeInput(
+            inputId = "sim_type", 
+            label = strong("Choose dataset to alter", style = "color:#003399"),
+            choices = c("", "Pain reduction (2-way)", "Type 2 Diabetes (3-way)"),
+            options = list(placeholder = "Select dataset")
+          ),
+          # Conditional panels for simulation parameters
+          conditionalPanel(
+            condition = "input.sim_type == 'Pain reduction (2-way)'",
+            sliderInput("sd_2way", "Standard Deviation:", min = 0.5, max = 5, value = 2.45, step = 0.1),
+            numericInput("n_per_group_2way", "Samples per group (max 200):", value = 50, min = 10, max = 200),
+            actionButton("sim_2way", "Run Simulation", class = "btn-primary")
+          ),
+          conditionalPanel(
+            condition = "input.sim_type == 'Type 2 Diabetes (3-way)'",
+            sliderInput("sd_3way", "Standard Deviation:", min = 0.1, max = 2, value = 0.5, step = 0.1),
+            numericInput("n_per_group_3way", "Samples per group (max 200):", value = 25, min = 10, max = 200),
+            actionButton("sim_3way", "Run Simulation", class = "btn-primary")
+          ),
+          # Download button (add after data management section)
+          conditionalPanel(
+            condition = "output.data_available",
+            tags$hr(),
+            tags$h5(strong("Download simulated data", style = "color:#003399")),
+            selectInput("download_format", "Select format:",
+                        choices = c("CSV" = "csv", "Excel" = "xlsx", "TSV" = "tsv")),
+            downloadButton("downloadData", "Download")
+          ),
           # Upload own data
+          tags$hr(),
           tags$h5(em("OR load your own data file", style = "color:#FF6600")),
           tags$p(
             em("Ensure your file is in the correct format and contains numeric outcome variables 
@@ -191,7 +212,7 @@ ui <- fluidPage(
           tags$p(
             "Use the ", strong("View Data"), " tab to preview your dataset and verify the data has been loaded correctly. 
   Navigate to the ", strong("Data Summary"), " tab for descriptive statistics and variable distributions."
-          ),
+          )
         ),
         mainPanel(
           width = 9,
@@ -259,6 +280,11 @@ ui <- fluidPage(
               uiOutput("two_aov_boxplots")
             ),
             tabPanel(
+              tags$p("Interaction plots", style = "color:#003399"),
+              br(), br(),
+              uiOutput("two_aov_intplots")
+            ),
+            tabPanel(
               tags$p("Diagnostics", style = "color:#003399"),
               br(), br(),
               uiOutput("two_aov_diag")
@@ -322,9 +348,10 @@ ui <- fluidPage(
                   "Factor2 x Factor3"
                 )
               ),
-              selectInput("conditioning_factor", "Condition on:",
-                choices = NULL
-              ), # Will be updated in server
+              # selectInput("conditioning_factor", "Condition on:",
+              #   choices = NULL
+              # ),
+              uiOutput("conditioning_factor_ui"),
               plotOutput("threeway_interaction_plot"),
               br(), br(), br()
             ),
@@ -537,10 +564,10 @@ ui <- fluidPage(
 #####################################
 # Load datasets and expressions used in the server
 #####################################
-load("penguins_df.RData")
-load("data_2x2.RData")
+# load("penguins_df.RData")
+# load("data_2x2.RData")
 load("data_3x2.RData")
-load("data_3x3.RData")
+# load("data_3x3.RData")
 load("data_3way.RData")
 
 #####################################
@@ -567,14 +594,14 @@ server <- function(input, output, session) {
     if (is.null(inFile)) {
       if (exdata == "") {
         return(NULL)
-      } else if (exdata == "Penguins") {
-        return(as.data.frame(penguins_df))
-      } else if (exdata == "BP reduction") {
-        return(as.data.frame(data_2x2))
-      } else if (exdata == "Pain reduction") {
+      # } else if (exdata == "Penguins") {
+      #   return(as.data.frame(penguins_df))
+      # } else if (exdata == "BP reduction") {
+      #   return(as.data.frame(data_2x2))
+      } else if (exdata == "Pain reduction (2-way)") {
         return(as.data.frame(data_3x2))
-      } else if (exdata == "VO2 Max improvement") {
-        return(as.data.frame(data_3x3))
+      # } else if (exdata == "VO2 Max improvement") {
+      #   return(as.data.frame(data_3x3))
       } else if (exdata == "Type 2 Diabetes (3-way)") {
         return(as.data.frame(data_3way))
       }
@@ -684,7 +711,134 @@ server <- function(input, output, session) {
 
     dataset(new_data)
   })
-
+  
+  #----------------
+  # Data simulation
+  output$data_available <- reactive({
+    return(!is.null(dataset()))
+  })
+  outputOptions(output, "data_available", suspendWhenHidden = FALSE)
+  
+  # 2-way simulation
+  observeEvent(input$sim_2way, {
+    n_per_group <- input$n_per_group_2way
+    drug_type <- rep(c("Placebo", "Low_Dose", "High_Dose"), each = n_per_group * 2)
+    gender <- rep(rep(c("Male", "Female"), each = n_per_group), 3)
+    
+    base_pain <- 5
+    drug_effect <- c(0, 2, 4)
+    gender_effect <- c(1, 2)
+    interaction_effect <- c(0, 0, 1, 2, 2, 3)
+    
+    pain_reduction <- numeric(n_per_group * 6)
+    for(i in 1:length(pain_reduction)) {
+      drug_idx <- ifelse(drug_type[i] == "Placebo", 1, 
+                         ifelse(drug_type[i] == "Low_Dose", 2, 3))
+      gender_idx <- ifelse(gender[i] == "Male", 1, 2)
+      group_idx <- 2*(drug_idx-1) + gender_idx
+      
+      pain_reduction[i] <- base_pain + 
+        drug_effect[drug_idx] + 
+        gender_effect[gender_idx] + 
+        interaction_effect[group_idx] + 
+        rnorm(1, 0, input$sd_2way)
+    }
+    
+    sim_data <- data.frame(
+      Drug_Type = factor(drug_type),
+      Gender = factor(gender),
+      Pain_Reduction = pain_reduction
+    )
+    
+    dataset(sim_data)
+  })
+  
+  # 3-way simulation
+  observeEvent(input$sim_3way, {
+    n_per_group <- input$n_per_group_3way
+    treatment <- rep(c("Drug", "Placebo"), each = n_per_group * 3 * 2)
+    bmi_category <- rep(rep(c("Normal", "Overweight", "Obese"), each = n_per_group * 2), 2)
+    activity <- rep(rep(c("Active", "Sedentary"), each = n_per_group), 2 * 3)
+    
+    # Effects (same as your original simulation)
+    base_effect <- 0.5
+    treatment_effect <- c(0.8, 0.2)
+    bmi_effect <- c(0.6, 0.4, 0.2)
+    activity_effect <- c(0.5, 0.2)
+    
+    treatment_bmi_int <- matrix(c(
+      0.3, 0.2, 0.1,
+      0.1, 0.0, -0.1
+    ), nrow = 2, byrow = TRUE)
+    
+    treatment_activity_int <- matrix(c(
+      0.2, 0.0,
+      0.1, -0.1
+    ), nrow = 2, byrow = TRUE)
+    
+    bmi_activity_int <- matrix(c(
+      0.2, 0.0,
+      0.1, -0.1,
+      0.0, -0.2
+    ), nrow = 3, byrow = TRUE)
+    
+    three_way_int <- array(c(
+      0.8,  0.1,
+      0.6, -0.2,
+      0.2, -0.4,
+      0.2, -0.3,
+      0.0, -0.5,
+      -0.3, -0.7
+    ), dim = c(3, 2, 2))
+    
+    n_total <- length(treatment)
+    hba1c_reduction <- numeric(n_total)
+    
+    for(i in 1:n_total) {
+      treat_idx <- ifelse(treatment[i] == "Drug", 1, 2)
+      bmi_idx <- ifelse(bmi_category[i] == "Normal", 1,
+                        ifelse(bmi_category[i] == "Overweight", 2, 3))
+      activity_idx <- ifelse(activity[i] == "Active", 1, 2)
+      
+      effect <- base_effect +
+        treatment_effect[treat_idx] +
+        bmi_effect[bmi_idx] +
+        activity_effect[activity_idx] +
+        treatment_bmi_int[treat_idx, bmi_idx] +
+        treatment_activity_int[treat_idx, activity_idx] +
+        bmi_activity_int[bmi_idx, activity_idx] +
+        three_way_int[bmi_idx, activity_idx, treat_idx] +
+        rnorm(1, 0, input$sd_3way)
+      
+      hba1c_reduction[i] <- max(effect, 0)
+    }
+    
+    sim_data <- data.frame(
+      Treatment = factor(treatment),
+      BMI_Category = factor(bmi_category),
+      Physical_Activity = factor(activity),
+      HbA1c_Reduction = hba1c_reduction
+    )
+    
+    dataset(sim_data)
+  })
+  
+  # Download handler
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste0("simulated_data.", input$download_format)
+    },
+    content = function(file) {
+      if(input$download_format == "csv") {
+        write.csv(dataset(), file, row.names = FALSE)
+      } else if(input$download_format == "xlsx") {
+        write_xlsx(dataset(), file)
+      } else if(input$download_format == "tsv") {
+        write.table(dataset(), file, sep = "\t", row.names = FALSE)
+      }
+    }
+  )
+  
   # OUTPUTS --------------------------------------------------------------------
 
   ## OVERVIEW OF DATA
@@ -726,12 +880,11 @@ server <- function(input, output, session) {
   })
 
   output$factor2_selector <- renderUI({
-    req(dataset())
-    selectInput("factor2", "Select Second Factor",
-      choices = names(dataset())[sapply(dataset(), is.factor)]
-    )
+    req(dataset(), input$factor1)
+    choices <- names(dataset())[sapply(dataset(), is.factor)]
+    choices <- choices[choices != input$factor1]
+    selectInput("factor2", "Select Second Factor", choices = choices)
   })
-
 
   #------------------------------------------------------------------
   # Two-way ANOVA Analysis
@@ -754,8 +907,8 @@ server <- function(input, output, session) {
     eta_squared(anova_model(), partial = TRUE)
   })
 
-  # Interaction plot
-  output$interaction_plot <- renderPlot({
+  # Interaction plot 1
+  output$interaction_plot1 <- renderPlot({
     req(input$outcome, input$factor1, input$factor2)
     ggplot(
       dataset(),
@@ -763,6 +916,20 @@ server <- function(input, output, session) {
     ) +
       stat_summary(fun = mean, geom = "point", size = 3) +
       stat_summary(fun = mean, geom = "line", aes(group = get(input$factor2))) +
+      stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
+      theme_minimal() +
+      labs(title = "Points show means, error bars show standard errors")
+  })
+  
+  # Interaction plot 2
+  output$interaction_plot2 <- renderPlot({
+    req(input$outcome, input$factor1, input$factor2)
+    ggplot(
+      dataset(),
+      aes_string(x = input$factor2, y = input$outcome, color = input$factor1)
+    ) +
+      stat_summary(fun = mean, geom = "point", size = 3) +
+      stat_summary(fun = mean, geom = "line", aes(group = get(input$factor1))) +
       stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
       theme_minimal() +
       labs(title = "Points show means, error bars show standard errors")
@@ -889,14 +1056,30 @@ server <- function(input, output, session) {
           5,
           plotOutput("factor21_boxplot")
         )
-      ),
-      br(),
-      tags$p("Two-way interaction plot", style = "color:#003399"),
-      plotOutput("interaction_plot")
+      )
     )
   })
 
-  output$two_aov_diag <- renderUI({
+  output$two_aov_intplots <- renderUI({
+    req(anova_model())
+    tagList(
+      tags$p("Two-way interaction plots", style = "color:#003399"),
+      br(),
+      fluidRow(
+        column(1, ),
+        column(
+          5,
+          plotOutput("interaction_plot1")
+        ),
+        column(
+          5,
+          plotOutput("interaction_plot2")
+        )
+      )
+    )
+  })
+  
+    output$two_aov_diag <- renderUI({
     req(anova_model())
     tagList(
       tags$p("Model diagnostics", style = "color:#003399"),
@@ -1094,6 +1277,24 @@ server <- function(input, output, session) {
     three_boxplot3()
   })
 
+  # Create dynamic UI for conditioning factor on interaction plots
+  output$conditioning_factor_ui <- renderUI({
+    req(input$threeway_factor1, input$threeway_factor2, input$threeway_factor3)
+    
+    # Get the conditioning factor name
+    conditioning_factor <- switch(input$interaction_view,
+                                  "Factor1 x Factor2" = input$threeway_factor3,
+                                  "Factor1 x Factor3" = input$threeway_factor2,
+                                  "Factor2 x Factor3" = input$threeway_factor1
+    )
+    
+    # Create the select input with dynamic label
+    selectInput("conditioning_factor", 
+                label = paste("Condition on:", conditioning_factor),
+                choices = unique(dataset()[[conditioning_factor]])
+    )
+  })
+  
   # Three-way ANOVA diagnostics
   output$threeway_model_comparison <- renderPrint({
     req(threeway_anova_model())
@@ -1197,11 +1398,11 @@ server <- function(input, output, session) {
       "tree_complexity_option",
       "Show:",
       choices = list(
-        "Model interactions" = "pvalue",
         "All possible interactions" = "zero",
-        "Significant interactions" = "significant"
+        "Model interactions" = "pvalue",
+        "Significant omnibus interactions" = "significant"
       ),
-      selected = "pvalue" # Default selection
+      selected = "zero" # Default selection
     )
   })
 
@@ -1239,7 +1440,7 @@ server <- function(input, output, session) {
           showNotification(
             "No significant interactions found (p-value > 0.05). Showing no tree nor summary.",
             type = "warning",
-            duration = 20
+            duration = 15
           )
           return(NULL)
         }
@@ -1281,14 +1482,37 @@ server <- function(input, output, session) {
   # Decision tree plot
   tree_plot <- reactive({
     req(tree_model())
+    
+    # Create custom node function to display mean and SE
+    node_format <- function(x, labs, digits, varlen) {
+      # Get the model frame
+      frame <- x$frame
+      
+      # Calculate standard error for each node
+      se <- sqrt(frame$dev/frame$n)
+      
+      # Format mean and SE for display
+      mean_vals <- round(frame$yval, 1)
+      se_vals <- round(se, 1)
+      
+      # Create labels with mean and SE
+      labels <- paste0(mean_vals, "\n±", se_vals)
+      
+      # Return the formatted labels
+      return(labels)
+    }
+    
     rpart.plot(tree_model(),
-      main = "Decision Tree Visualisation",
-      roundint = FALSE,
-      fallen.leaves = TRUE,
-      box.palette = "GnBu",
-      branch.lty = 2,
-      shadow.col = "gray"
-      # nn = TRUE
+               main = "Decision Tree Visualisation",
+               roundint = FALSE,
+               fallen.leaves = TRUE,
+               box.palette = "GnBu",
+               branch.lty = 2,
+               shadow.col = "gray",
+               node.fun = node_format,
+               nn = TRUE,
+               split.cex = 0.8,  # Size of split labels
+               nn.cex = 0.8     # Size of node numbers
     )
   })
 
@@ -1341,16 +1565,6 @@ server <- function(input, output, session) {
   })
 
   # UI elements for decision tree
-  # output$decision_tree <- renderUI({
-  #   req(input$run_tree)
-  #   tagList(
-  #     plotOutput("decision_tree_plot", height = "600px"),
-  #     tags$p("Tree Summary", style = "color:#003399"),
-  #     verbatimTextOutput("tree_summary"),
-  #     br(), br(), br(), br()
-  #   )
-  # })
-
   output$decision_tree <- renderUI({
     req(input$run_tree)
     tagList(
@@ -1362,20 +1576,33 @@ server <- function(input, output, session) {
       # Interpretation Guide
       div(
         style = "background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;",
-        tags$p("How to interpret the Decision Tree:", style = "color:#003399"),
+        tags$p("All information about the decision tree is included automatically below. Simply click on a button to access a specific interpretation or guide.", style = "color:#003399"),
+      checkboxInput("show_interpret_tree", "How to interpret the Decision Tree:", value = FALSE),
+      conditionalPanel(
+        condition = "input.show_interpret_tree",
         tags$ul(
           tags$li(
-            "Each node contains two values:",
+            "Each node displays two numbers:",
             tags$ul(
-              tags$li("Top number: Average value for that group"),
-              tags$li("Percentage: Portion of total data in that node")
+              tags$li("Top number: Mean (average) value for that subgroup"),
+              tags$li("Bottom number (±): Standard error of the mean – smaller values indicate greater precision")
             )
           ),
-          tags$li("The tree splits (i.e., the interactions) based on decision rules"),
-          tags$li("Follow paths from top to bottom to see decision sequences"),
-          tags$li("Color coding (green vs blue) shows different decision pathways")
+          tags$li(
+            "Reading a path from top to bottom:",
+            tags$ol(
+              tags$li("Start at the root node (top of the tree)."),
+              tags$li("Follow the branch that matches your factor level (e.g., “Drug” vs “Placebo”)."),
+              tags$li("Continue downward, selecting the branch that matches the next splitting rule at each level."),
+              tags$li("The leaf node you reach gives the mean outcome and its precision for that specific combination of factor levels.")
+            )
+          ),
+          tags$li("Interpreting splits: every split represents an interaction; the model chooses the split that best separates groups at that stage."),
+          tags$li("Color coding (e.g., blue vs. green) simply differentiates branches and has no statistical meaning."),
+          tags$li("Compare leaf-node means to see which pathways (combinations of factors) produce the greatest or least effects.")
         )
-      ),
+      )
+    ),
       br(),
       # Tree Summary Section
       # Original Tree Summary Output
@@ -1383,7 +1610,9 @@ server <- function(input, output, session) {
       verbatimTextOutput("tree_summary"),
       div(
         style = "background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;",
-        tags$p("Understanding the Tree Summary:", style = "color:#003399"),
+        checkboxInput("show_interpret_summary", "Understanding the Tree Summary:", value = FALSE),
+        conditionalPanel(
+          condition = "input.show_interpret_summary",
         tags$ul(
           tags$li("Key variables used for predictions"),
           tags$li("Root Node Error: Represents initial data variance"),
@@ -1398,6 +1627,7 @@ server <- function(input, output, session) {
           tags$li("Xerror: Shows model performance at each split")
         )
       )
+    )
     )
   })
 
@@ -1617,8 +1847,21 @@ server <- function(input, output, session) {
           "",
           "### Decision Tree Plot",
           "The decision tree provides an intuitive visualization of how different predictors influence the outcome variable.",
-          "```{r echo=FALSE, fig.width=7, fig.height=5}",
-          "rpart.plot(tree_model(), main = 'Decision Tree Visualisation', roundint = FALSE, fallen.leaves = TRUE, box.palette = 'GnBu', branch.lty = 2, shadow.col = 'gray')",
+          "",
+          "```{r setup-tree, echo=FALSE}",
+          "# Define node formatting function",
+          "node_format <- function(x, labs, digits, varlen) {",
+          "  frame <- x$frame",
+          "  se <- sqrt(frame$dev/frame$n)",
+          "  mean_vals <- round(frame$yval, 1)",
+          "  se_vals <- round(se, 1)",
+          "  labels <- paste0(mean_vals, '\\n±', se_vals)",
+          "  return(labels)",
+          "}",
+          "```",
+          "",
+          "```{r tree-plot, echo=FALSE, fig.width=7, fig.height=5}",
+          "rpart.plot(tree_model(), main = 'Decision Tree Visualisation', roundint = FALSE, fallen.leaves = TRUE, box.palette = 'GnBu', branch.lty = 2,  node.fun = node_format, shadow.col = 'gray', nn = TRUE, split.cex = 0.8, nn.cex = 0.7)",
           "```",
           "",
           "### Tree Summary",
@@ -1685,8 +1928,21 @@ server <- function(input, output, session) {
           "",
           "### Decision Tree Plot",
           "The decision tree provides an intuitive visualization of how different predictors influence the outcome variable.",
-          "```{r echo=FALSE, fig.width=10, fig.height=7}",
-          "rpart.plot(tree_model(), main = 'Decision Tree Visualisation', roundint = FALSE, fallen.leaves = TRUE, box.palette = 'GnBu', branch.lty = 2, shadow.col = 'gray')",
+          "",
+          "```{r setup-tree, echo=FALSE}",
+          "# Define node formatting function",
+          "node_format <- function(x, labs, digits, varlen) {",
+          "  frame <- x$frame",
+          "  se <- sqrt(frame$dev/frame$n)",
+          "  mean_vals <- round(frame$yval, 1)",
+          "  se_vals <- round(se, 1)",
+          "  labels <- paste0(mean_vals, '\\n±', se_vals)",
+          "  return(labels)",
+          "}",
+          "```",
+          "",
+          "```{r tree-plot, echo=FALSE, fig.width=7, fig.height=5}",
+          "rpart.plot(tree_model(), main = 'Decision Tree Visualisation', roundint = FALSE, fallen.leaves = TRUE, box.palette = 'GnBu', branch.lty = 2, node.fun = node_format, shadow.col = 'gray', nn = TRUE, split.cex = 0.8, nn.cex = 0.7)",
           "```",
           "",
           "### Tree Summary",
