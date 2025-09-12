@@ -1598,7 +1598,7 @@ server <- function(input, output, session) {
             )
           ),
           tags$li("Interpreting splits: every split represents an interaction; the model chooses the split that best separates groups at that stage."),
-          tags$li("Color coding (e.g., blue vs. green) simply differentiates branches and has no statistical meaning."),
+          tags$li("Colour coding reflects the predicted mean response for each terminal node. The green–blue gradient corresponds to the range of predicted values, with different colours indicating different levels of the outcome variable."),
           tags$li("Compare leaf-node means to see which pathways (combinations of factors) produce the greatest or least effects.")
         )
       )
