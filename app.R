@@ -7,6 +7,15 @@
 
 options(shiny.maxRequestSize = 10000 * 1024^2)
 
+#options(bitmapType = "cairo")  # headless-friendly PNGs
+if (requireNamespace("ragg", quietly = TRUE)) {
+  options(device = function(...) ragg::agg_png(...))
+}
+summarytools::st_options(
+  use.x11 = FALSE,
+  plain.ascii = FALSE
+)
+
 #################
 # Load libraries
 #################
@@ -43,6 +52,7 @@ library(rpart)
 library(rpart.plot) # For visualizing the tree
 library(palmerpenguins)
 library(stargazer)
+library(officer) # For Word reports
 library(gridExtra) # For arranging plots
 library(effectsize) # For effect sizes
 library(tidyr) # For data manipulation
@@ -137,7 +147,7 @@ ui <- fluidPage(
           tags$hr(),
           selectizeInput(
             inputId = "exdata", label = strong("Choose example data", style = "color:#003399"), selected = "",
-            choices = c("", "Pain reduction (2-way)", "Type 2 Diabetes (3-way)"),
+            choices = c("", "Pain reduction (2-way)", "Type 2 Diabetes (3-way)", "Real data (Unmet expectations)"),
             options = list(placeholder = "Select dataset")
           ),
           
@@ -352,7 +362,13 @@ ui <- fluidPage(
               #   choices = NULL
               # ),
               uiOutput("conditioning_factor_ui"),
-              plotOutput("threeway_interaction_plot"),
+              fluidRow(
+                column(3, ),
+                column(6,
+                       plotOutput("threeway_interaction_plot"),
+                )
+              ),
+              
               br(), br(), br()
             ),
             tabPanel(
@@ -485,6 +501,9 @@ ui <- fluidPage(
         tags$p("For Three-Way interactions, you'll need to tick the", em("Include third factor"), "box to customize the tree model."),
         tags$p("Confirm and study interactions by exploring the decision tree. You can choose which interactions to show from the radio buttons."),
         br(),
+        img(src = "interpretation.png", height = 600),
+        br(),
+        br(),
         tags$h4("Step 5: Generate a report"),
         tags$p(
           "After your analysis, you can generate a report by selecting the desired format (HTML, PDF, or Word)."
@@ -564,11 +583,9 @@ ui <- fluidPage(
 #####################################
 # Load datasets and expressions used in the server
 #####################################
-# load("penguins_df.RData")
-# load("data_2x2.RData")
 load("data_3x2.RData")
-# load("data_3x3.RData")
 load("data_3way.RData")
+load("real_dataset.RData")
 
 #####################################
 # Define server logic
@@ -594,16 +611,12 @@ server <- function(input, output, session) {
     if (is.null(inFile)) {
       if (exdata == "") {
         return(NULL)
-      # } else if (exdata == "Penguins") {
-      #   return(as.data.frame(penguins_df))
-      # } else if (exdata == "BP reduction") {
-      #   return(as.data.frame(data_2x2))
       } else if (exdata == "Pain reduction (2-way)") {
         return(as.data.frame(data_3x2))
-      # } else if (exdata == "VO2 Max improvement") {
-      #   return(as.data.frame(data_3x3))
       } else if (exdata == "Type 2 Diabetes (3-way)") {
         return(as.data.frame(data_3way))
+      } else if (exdata == "Real data (Unmet expectations)") {
+        return(as.data.frame(real_dataset))
       }
     }
 
@@ -758,7 +771,7 @@ server <- function(input, output, session) {
     n_per_group <- input$n_per_group_3way
     treatment <- rep(c("Drug", "Placebo"), each = n_per_group * 3 * 2)
     bmi_category <- rep(rep(c("Normal", "Overweight", "Obese"), each = n_per_group * 2), 2)
-    activity <- rep(rep(c("Active", "Sedentary"), each = n_per_group), 2 * 3)
+    activity <- rep(rep(c("Active", "Inactive"), each = n_per_group), 2 * 3)
     
     # Effects (same as your original simulation)
     base_effect <- 0.5
@@ -1636,12 +1649,12 @@ server <- function(input, output, session) {
   # output$download_report <- downloadHandler(
   #   filename = function() {
   #     paste("EXCITE_Analysis_Report",
-  #       switch(input$report_format,
-  #         "HTML" = ".html",
-  #         "PDF" = ".pdf",
-  #         "Word" = ".docx"
-  #       ),
-  #       sep = ""
+  #           switch(input$report_format,
+  #                  "HTML" = ".html",
+  #                  "PDF" = ".pdf",
+  #                  "Word" = ".docx"
+  #           ),
+  #           sep = ""
   #     )
   #   },
   #   content = function(file) {
@@ -1662,46 +1675,76 @@ server <- function(input, output, session) {
   #         "",
   #         "## Dataset Overview",
   #         "",
+  #         "Understanding the dataset is crucial before performing any statistical analysis. ",
+  #         "The following sections provide an overview of the data structure and summary statistics.",
+  #         "",
   #         "### Structure of the Dataset",
+  #         "The dataset's structure reveals the types of variables present and their formats.",
   #         "```{r echo=FALSE}",
   #         "str(dataset())",
   #         "```",
   #         "",
   #         "### Summary of the Dataset",
+  #         "A summary of the dataset provides basic descriptive statistics, such as means, standard deviations, and missing values.",
   #         "```{r echo=FALSE}",
   #         "summary(dataset())",
   #         "```",
   #         "",
   #         "## Two-way ANOVA Results",
   #         "",
+  #         "A Two-Way ANOVA examines the effect of two categorical predictors on a continuous outcome variable. ",
+  #         "This analysis identifies significant main effects and interaction effects.",
+  #         "",
   #         "### Model Summary",
+  #         "The model summary below provides the ANOVA table, including degrees of freedom, sum of squares, F-values, and p-values.",
   #         "```{r model-summary, echo=FALSE}",
   #         "summary(anova_model())",
   #         "```",
   #         "",
   #         "### Effect Sizes",
+  #         "Effect sizes help determine the magnitude of observed differences. Here, partial eta squared values are presented.",
   #         "```{r effect-sizes, echo=FALSE}",
   #         "eta_squared(anova_model(), partial = TRUE)",
   #         "```",
   #         "",
   #         "### Boxplots",
-  #         "```{r boxplots, echo=FALSE, fig.width=10, fig.height=8}",
+  #         "Boxplots allow for visualizing differences in group means and variability across categories.",
+  #         "```{r boxplots, echo=FALSE, fig.width=10, fig.height=8, fig.align='left'}",
   #         "gridExtra::grid.arrange(fact1_boxplot(), fact2_boxplot(), fact12_boxplot(), fact21_boxplot(), ncol = 2, nrow = 2)",
   #         "```",
   #         "",
   #         "## Decision Tree Summary",
   #         "",
+  #         "Decision trees complement ANOVA by identifying interaction effects and hierarchical relationships in the data. ",
+  #         "The following sections visualize the decision tree model and its key insights.",
+  #         "",
   #         "### Decision Tree Plot",
-  #         "```{r echo=FALSE, fig.width=7, fig.height=5}",
-  #         "rpart.plot(tree_model(), main = 'Decision Tree Visualisation', roundint = FALSE, fallen.leaves = TRUE, box.palette = 'GnBu', branch.lty = 2, shadow.col = 'gray')",
+  #         "The decision tree provides an intuitive visualization of how different predictors influence the outcome variable.",
+  #         "",
+  #         "```{r setup-tree, echo=FALSE}",
+  #         "# Define node formatting function",
+  #         "node_format <- function(x, labs, digits, varlen) {",
+  #         "  frame <- x$frame",
+  #         "  se <- sqrt(frame$dev/frame$n)",
+  #         "  mean_vals <- round(frame$yval, 1)",
+  #         "  se_vals <- round(se, 1)",
+  #         "  labels <- paste0(mean_vals, '\\n±', se_vals)",
+  #         "  return(labels)",
+  #         "}",
+  #         "```",
+  #         "",
+  #         "```{r tree-plot, echo=FALSE, fig.width=7, fig.height=5}",
+  #         "rpart.plot(tree_model(), main = 'Decision Tree Visualisation', roundint = FALSE, fallen.leaves = TRUE, box.palette = 'GnBu', branch.lty = 2,  node.fun = node_format, shadow.col = 'gray', nn = TRUE, split.cex = 0.8, nn.cex = 0.7)",
   #         "```",
   #         "",
   #         "### Tree Summary",
+  #         "A summary of the decision tree model, including complexity parameter values and pruning information.",
   #         "```{r echo=FALSE}",
   #         "printcp(tree_model())",
   #         "```",
   #         "",
   #         "### Variable Importance Plot",
+  #         "The variable importance plot ranks predictors by their contribution to the decision tree model.",
   #         "```{r echo=FALSE, fig.width=5, fig.height=3}",
   #         "var_imp_plot()",
   #         "```"
@@ -1719,41 +1762,70 @@ server <- function(input, output, session) {
   #         "",
   #         "## Dataset Overview",
   #         "",
+  #         "Understanding the dataset is crucial before performing any statistical analysis. ",
+  #         "The following sections provide an overview of the data structure and summary statistics.",
+  #         "",
   #         "### Structure of the Dataset",
+  #         "The dataset's structure reveals the types of variables present and their formats.",
   #         "```{r echo=FALSE}",
   #         "str(dataset())",
   #         "```",
   #         "",
   #         "## Three-way ANOVA Results",
   #         "",
+  #         "A Three-Way ANOVA extends the Two-Way ANOVA by examining interactions among three categorical variables. ",
+  #         "This helps assess whether the interaction of three factors significantly impacts the outcome variable.",
+  #         "",
   #         "### Model Summary",
+  #         "The model summary below provides the ANOVA table, including degrees of freedom, sum of squares, F-values, and p-values.",
   #         "```{r model-summary, echo=FALSE}",
   #         "summary(threeway_anova_model())",
   #         "```",
   #         "",
   #         "### Effect Sizes",
+  #         "Effect sizes help determine the magnitude of observed differences. Here, partial eta squared values are presented.",
   #         "```{r effect-sizes, echo=FALSE}",
   #         "eta_squared(threeway_anova_model(), partial = TRUE)",
   #         "```",
   #         "",
   #         "### Boxplots",
-  #         "```{r boxplots, echo=FALSE, fig.width=10, fig.height=8}",
-  #         "gridExtra::grid.arrange(three_boxplot1(), three_boxplot2(), three_boxplot3(), NULL, ncol = 2, nrow = 2)",
+  #         "Boxplots allow for visualizing differences in group means and variability across categories.",
+  #         "```{r boxplots, echo=FALSE, fig.width=10, fig.height=8, fig.align='left'}",
+  #         "gridExtra::grid.arrange(three_boxplot1(), three_boxplot2(), three_boxplot3(), ncol = 2, nrow = 2)",
   #         "```",
   #         "",
   #         "## Decision Tree Summary",
   #         "",
+  #         "Decision trees complement ANOVA by identifying interaction effects and hierarchical relationships in the data. ",
+  #         "The following sections visualize the decision tree model and its key insights.",
+  #         "",
   #         "### Decision Tree Plot",
-  #         "```{r echo=FALSE, fig.width=10, fig.height=7}",
-  #         "rpart.plot(tree_model(), main = 'Decision Tree Visualisation', roundint = FALSE, fallen.leaves = TRUE, box.palette = 'GnBu', branch.lty = 2, shadow.col = 'gray')",
+  #         "The decision tree provides an intuitive visualization of how different predictors influence the outcome variable.",
+  #         "",
+  #         "```{r setup-tree, echo=FALSE}",
+  #         "# Define node formatting function",
+  #         "node_format <- function(x, labs, digits, varlen) {",
+  #         "  frame <- x$frame",
+  #         "  se <- sqrt(frame$dev/frame$n)",
+  #         "  mean_vals <- round(frame$yval, 1)",
+  #         "  se_vals <- round(se, 1)",
+  #         "  labels <- paste0(mean_vals, '\\n±', se_vals)",
+  #         "  return(labels)",
+  #         "}",
+  #         "```",
+  #         "",
+  #         "```{r tree-plot, echo=FALSE, fig.width=7, fig.height=5}",
+  #         "rpart.plot(tree_model(), main = 'Decision Tree Visualisation', roundint = FALSE, fallen.leaves = TRUE, box.palette = 'GnBu', branch.lty = 2, node.fun = node_format, shadow.col = 'gray', nn = TRUE, split.cex = 0.8, nn.cex = 0.7)",
   #         "```",
   #         "",
   #         "### Tree Summary",
+  #         "A summary of the decision tree model, including complexity parameter values and pruning information.",
   #         "```{r echo=FALSE}",
   #         "printcp(tree_model())",
   #         "```",
   #         "",
   #         "### Variable Importance Plot",
+  #         "The variable importance plot ranks predictors by their contribution to the decision tree model.",
   #         "```{r echo=FALSE, fig.width=5, fig.height=3}",
   #         "var_imp_plot()",
   #         "```"
@@ -1763,16 +1835,23 @@ server <- function(input, output, session) {
   #     # Write the content to the temporary file
   #     writeLines(report_content, temp_report)
   # 
+  #     # Determine output format
+  #     output_format <- switch(input$report_format,
+  #                             "HTML" = "html_document",
+  #                             "PDF" = "pdf_document",
+  #                             "Word" = "word_document"
+  #     )
+  # 
   #     # Render the report
   #     rmarkdown::render(
   #       temp_report,
+  #       output_format = output_format,
   #       output_file = file,
   #       params = list(data = dataset())
   #     )
   #   }
   # )
-  #############################################
-
+  # #############################################
   output$download_report <- downloadHandler(
     filename = function() {
       paste("EXCITE_Analysis_Report",
@@ -1836,8 +1915,21 @@ server <- function(input, output, session) {
           "",
           "### Boxplots",
           "Boxplots allow for visualizing differences in group means and variability across categories.",
-          "```{r boxplots, echo=FALSE, fig.width=10, fig.height=8}",
-          "gridExtra::grid.arrange(fact1_boxplot(), fact2_boxplot(), fact12_boxplot(), fact21_boxplot(), ncol = 2, nrow = 2)",
+          "",
+          "```{r boxplot1, echo=FALSE, fig.width=6, fig.height=4, fig.align='center'}",
+          "fact1_boxplot()",
+          "```",
+          "",
+          "```{r boxplot2, echo=FALSE, fig.width=6, fig.height=4, fig.align='center'}",
+          "fact2_boxplot()",
+          "```",
+          "",
+          "```{r boxplot3, echo=FALSE, fig.width=6, fig.height=4, fig.align='center'}",
+          "fact12_boxplot()",
+          "```",
+          "",
+          "```{r boxplot4, echo=FALSE, fig.width=6, fig.height=4, fig.align='center'}",
+          "fact21_boxplot()",
           "```",
           "",
           "## Decision Tree Summary",
@@ -1917,8 +2009,17 @@ server <- function(input, output, session) {
           "",
           "### Boxplots",
           "Boxplots allow for visualizing differences in group means and variability across categories.",
-          "```{r boxplots, echo=FALSE, fig.width=10, fig.height=8}",
-          "gridExtra::grid.arrange(three_boxplot1(), three_boxplot2(), three_boxplot3(), NULL, ncol = 2, nrow = 2)",
+          "",
+          "```{r boxplot1, echo=FALSE, fig.width=6, fig.height=4, fig.align='center'}",
+          "three_boxplot1()",
+          "```",
+          "",
+          "```{r boxplot2, echo=FALSE, fig.width=6, fig.height=4, fig.align='center'}",
+          "three_boxplot2()",
+          "```",
+          "",
+          "```{r boxplot3, echo=FALSE, fig.width=6, fig.height=4, fig.align='center'}",
+          "three_boxplot3()",
           "```",
           "",
           "## Decision Tree Summary",
@@ -1962,16 +2063,23 @@ server <- function(input, output, session) {
       # Write the content to the temporary file
       writeLines(report_content, temp_report)
       
+      # Determine output format
+      output_format <- switch(input$report_format,
+                              "HTML" = "html_document",
+                              "PDF" = "pdf_document",
+                              "Word" = "word_document"
+      )
+      
       # Render the report
       rmarkdown::render(
         temp_report,
+        output_format = output_format,
         output_file = file,
         params = list(data = dataset())
       )
     }
   )
-  
-  
+
 }
 
 #################################
